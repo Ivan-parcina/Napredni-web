@@ -1,25 +1,42 @@
-import logo from './logo.svg';
-import './App.css';
+// src/App.js
+import React, { useContext } from "react";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import CarFilter from "./components/CarFilter";
+import Details from "./components/Details";
+import Cart from "./components/Cart";
+import { CartProvider, CartContext } from "./context/CartContext";
+import CartModal from "./components/CartModal";
 
-function App() {
+function AppContent() {
+  const { modalOpen, modalProduct, closeModal } = useContext(CartContext);
+  const navigate = useNavigate();
+
+  const handleGoToCart = () => {
+    closeModal();
+    navigate("/cart");
+  };
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <>
+      {modalOpen && (
+        <CartModal product={modalProduct} onClose={closeModal} onGoToCart={handleGoToCart} />
+      )}
+
+      <Routes>
+        <Route path="/" element={<CarFilter />} />
+        <Route path="/details/:id" element={<Details />} />
+        <Route path="/cart" element={<Cart />} />
+      </Routes>
+    </>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <CartProvider>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </CartProvider>
+  );
+}
