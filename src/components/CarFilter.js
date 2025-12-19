@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import productsData from "../data/products.json";
 import Results from "./Results";
+
+const API_URL = "http://localhost:5000/api";
 
 const CarFilter = () => {
   const [brands, setBrands] = useState([]);
@@ -10,35 +11,62 @@ const CarFilter = () => {
   const [selectedModel, setSelectedModel] = useState("");
 
   const [filtered, setFiltered] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // Učitaj brendove
+  // Učitaj brendove sa servera (umjesto iz products.json)
   useEffect(() => {
-    const uniqueBrands = [...new Set(productsData.map((p) => p.brand))];
-    setBrands(uniqueBrands);
-    setSelectedBrand(uniqueBrands[0]);
+    const fetchBrands = async () => {
+      try {
+        const response = await fetch(`${API_URL}/brands`);
+        const data = await response.json();
+        setBrands(data);
+        if (data.length > 0) {
+          setSelectedBrand(data[0]);
+        }
+      } catch (error) {
+        console.error("Greška pri dohvaćanju brendova:", error);
+      }
+    };
+
+    fetchBrands();
   }, []);
 
   // Učitaj modele kada se promijeni brend
   useEffect(() => {
-    if (selectedBrand) {
-      const filteredModels = productsData
-        .filter((p) => p.brand === selectedBrand)
-        .map((p) => p.model);
+    const fetchModels = async () => {
+      if (selectedBrand) {
+        try {
+          const response = await fetch(`${API_URL}/models/${selectedBrand}`);
+          const data = await response.json();
+          setModels(data);
+          if (data.length > 0) {
+            setSelectedModel(data[0]);
+          }
+        } catch (error) {
+          console.error("Greška pri dohvaćanju modela:", error);
+        }
+      }
+    };
 
-      const unique = [...new Set(filteredModels)];
-      setModels(unique);
-      setSelectedModel(unique[0]);
-    }
+    fetchModels();
   }, [selectedBrand]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
-    const result = productsData.filter(
-      (p) => p.brand === selectedBrand && p.model === selectedModel
-    );
-
-    setFiltered(result);
+    try {
+      // Poziv API-a umjesto filtriranja productsData
+      const response = await fetch(
+        `${API_URL}/filter?brand=${selectedBrand}&model=${selectedModel}`
+      );
+      const data = await response.json();
+      setFiltered(data);
+    } catch (error) {
+      console.error("Greška pri filtriranju:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -73,7 +101,9 @@ const CarFilter = () => {
         </div>
 
         <br />
-        <button type="submit">Filtriraj</button>
+        <button type="submit" disabled={loading}>
+          {loading ? "Filtriranje..." : "Filtriraj"}
+        </button>
       </form>
 
       <Results data={filtered} />

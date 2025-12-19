@@ -1,8 +1,9 @@
 // src/components/Details.js
-import React, { Component, useContext } from "react";
+import React, { Component, useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import productsData from "../data/products.json";
 import { CartContext } from "../context/CartContext";
+
+const API_URL = "http://localhost:5000/api";
 
 class DetailsComponent extends Component {
   handleAddToCart = () => {
@@ -13,8 +14,19 @@ class DetailsComponent extends Component {
   };
 
   render() {
-    const { product } = this.props;
-    if (!product) return <h2>Proizvod nije pronađen.</h2>;
+    const { product, loading, error } = this.props;
+
+    if (loading) {
+      return <div style={{ padding: "20px" }}><h2>Učitavanje...</h2></div>;
+    }
+
+    if (error) {
+      return <div style={{ padding: "20px" }}><h2>Greška: {error}</h2></div>;
+    }
+
+    if (!product) {
+      return <h2>Proizvod nije pronađen.</h2>;
+    }
 
     return (
       <div style={{ padding: "20px" }}>
@@ -30,11 +42,44 @@ class DetailsComponent extends Component {
   }
 }
 
-// wrapper daje useParams i context funkcije
+// wrapper daje useParams i context funkcije + dohvaća podatke sa API-a
 export default function DetailsWrapper() {
   const { id } = useParams();
-  const product = productsData.find((p) => p.id === Number(id));
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const { addToCart, openModal } = useContext(CartContext);
 
-  return <DetailsComponent product={product} addToCart={addToCart} openModal={openModal} />;
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        setLoading(true);
+        // Dohvaćanje sa servera umjesto iz productsData
+        const response = await fetch(`${API_URL}/products/${id}`);
+        
+        if (!response.ok) {
+          throw new Error("Proizvod nije pronađen");
+        }
+        
+        const data = await response.json();
+        setProduct(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [id]);
+
+  return (
+    <DetailsComponent 
+      product={product} 
+      loading={loading}
+      error={error}
+      addToCart={addToCart} 
+      openModal={openModal} 
+    />
+  );
 }
